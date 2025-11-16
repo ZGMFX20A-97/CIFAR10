@@ -101,25 +101,25 @@ def train(train_dataset):
         # epochごとの損失、epochごとのサンプル数、正確に推論できた個数、開始時間
         total_loss, total_samples, total_correct, start = 0.0, 0, 0, time.time()
         # データローダをイテレートする
-        for x, y in dataloader:
+        for image, label in dataloader:
             # モデルを訓練モードにする
             model.train()
-            y_pred = model(x)
+            y_pred = model(image)
             # 損失計算
-            loss = criterion(y_pred, y)
+            loss = criterion(y_pred, label)
             # 勾配の初期化→BP→パラメータ更新
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             # 正確に予測できたサンプル個数を集計する
-            total_correct += (torch.argmax(y_pred, dim=-1) == y).sum()
+            total_correct += (torch.argmax(y_pred, dim=-1) == label).sum()
 
             # 今バッチの総ロス
-            total_loss += loss.item() * len(y)
+            total_loss += loss.item() * len(label)
 
             # 今バッチの総サンプル個数
-            total_samples += len(y)
+            total_samples += len(label)
 
         # 毎epochごとの結果を出力
         print(
@@ -131,7 +131,28 @@ def train(train_dataset):
 
 # モデルの検証
 def evaluate(test_dataset):
-    pass
+
+    dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
+
+    model = ImageClassificationModel()
+
+    model.load_state_dict(torch.load("./model/image_model.pth"))
+
+    total_correct, total_samples = 0, 0
+
+    for image, label in dataloader:
+        # 検証モード
+        model.eval()
+
+        y_pred = model(image)
+
+        y_pred = torch.argmax(y_pred, dim=-1)
+
+        total_correct += (y_pred == label).sum()
+
+        total_samples += len(label)
+
+    print(f"acc: {total_correct/total_samples:.2f}")
 
 
 if __name__ == "__main__":
@@ -144,6 +165,6 @@ if __name__ == "__main__":
     # データセットの獲得
     train_dataset, test_dataset = create_dataset()
 
-    train(train_dataset)
+    # train(train_dataset)
 
     evaluate(test_dataset)
